@@ -70,7 +70,7 @@ Token* tokenize(char* p) {
             continue;
         }
 
-        error_at(p, "failed to tokenize: %s\n", p);
+        error_at(p, "failed to tokenize");
     }
 
     new_token(TK_EOF, cur, p);
@@ -88,14 +88,14 @@ bool consume_reserved(char op) {
 // If the next token is expected reserved, comsume a token.
 // Otherwise report error.
 void expect_reserved(char op) {
-    if (token->kind != TK_RESERVED || token->str[0] != op) error_at(token->str, "expected %s but got %s", op, token->str[0]);
+    if (token->kind != TK_RESERVED || token->str[0] != op) error_at(token->str, "not %s");
     token = token->next;
 }
 
 // If next token is number, return its value and consume a token.
 // Otherwise report error.
 int expect_number() {
-    if (token->kind != TK_NUM) error_at(token->str, "expect number, but got %d\n", token->kind);
+    if (token->kind != TK_NUM) error_at(token->str, "not a number");
     int val = token->val;
     token = token->next;
     return val;
