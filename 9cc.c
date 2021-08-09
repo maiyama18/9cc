@@ -22,9 +22,17 @@ struct Token {
 // Current token.
 Token* token;
 
-void error(char* fmt, ...) {
+char* user_input;
+
+void error_at(char* loc, char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+
+    int pos = loc - user_input;
+
+    fprintf(stderr, "%s\n", user_input);
+    fprintf(stderr, "%*s", pos, " ");
+    fprintf(stderr, "^ ");
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
     exit(1);
@@ -62,7 +70,7 @@ Token* tokenize(char* p) {
             continue;
         }
 
-        error("failed to tokenize: %s\n", p);
+        error_at(p, "failed to tokenize: %s\n", p);
     }
 
     new_token(TK_EOF, cur, p);
@@ -80,16 +88,14 @@ bool consume_reserved(char op) {
 // If the next token is expected reserved, comsume a token.
 // Otherwise report error.
 void expect_reserved(char op) {
-    if (token->kind != TK_RESERVED || token->str[0] != op)
-        error("expected %s but got %s", op, token->str[0]);
+    if (token->kind != TK_RESERVED || token->str[0] != op) error_at(token->str, "expected %s but got %s", op, token->str[0]);
     token = token->next;
 }
 
 // If next token is number, return its value and consume a token.
 // Otherwise report error.
 int expect_number() {
-    if (token->kind != TK_NUM)
-        error("expect number, but got %d\n", token->kind);
+    if (token->kind != TK_NUM) error_at(token->str, "expect number, but got %d\n", token->kind);
     int val = token->val;
     token = token->next;
     return val;
@@ -104,7 +110,8 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "arg missing!\n");
     }
 
-    token = tokenize(argv[1]);
+    user_input = argv[1];
+    token = tokenize(user_input);
 
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
