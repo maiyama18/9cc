@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <string.h>
 
 typedef enum {
     TK_RESERVED,
@@ -17,6 +18,7 @@ struct Token {
     Token* next;
     int val;
     char* str;
+    int len;
 };
 
 // Current token.
@@ -38,10 +40,11 @@ void error_at(char* loc, char* fmt, ...) {
     exit(1);
 }
 
-Token* new_token(TokenKind kind, Token* cur, char* str) {
+Token* new_token(TokenKind kind, Token* cur, char* str, int len) {
     Token* t = calloc(1, sizeof(Token));
     t->kind = kind;
     t->str = str;
+    t->len = len;
 
     cur->next = t;
     return t;
@@ -60,12 +63,12 @@ Token* tokenize(char* p) {
         }
 
         if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
-            cur = new_token(TK_RESERVED, cur, p++);
+            cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
 
         if (isdigit(*p)) {
-            cur = new_token(TK_NUM, cur, p);
+            cur = new_token(TK_NUM, cur, p, 0);
             cur->val = strtol(p, &p, 10);
             continue;
         }
@@ -73,14 +76,20 @@ Token* tokenize(char* p) {
         error_at(p, "failed to tokenize");
     }
 
-    new_token(TK_EOF, cur, p);
+    new_token(TK_EOF, cur, p, 0);
     return head.next;
 }
 
 // If the next token is expected reserved, return true and comsume a token.
 // Otherwise return false.
-bool consume_reserved(char op) {
-    if (token->kind != TK_RESERVED || token->str[0] != op) return false;
+bool consume_reserved(char* op) {
+    if (
+        token->kind != TK_RESERVED ||
+        strlen(op) != token->len ||
+        memcmp(token->str, op, token->len)
+        ) {
+        return false;
+    }
     token = token->next;
     return true;
 }
@@ -141,7 +150,7 @@ Node* expr();
 
 // primary = "(" expr ")" | num
 Node* primary() {
-    if (consume_reserved('(')) {
+    if (consume_reserved("(")) {
         Node* node = expr();
         expect_reserved(')');
         return node;
@@ -151,10 +160,10 @@ Node* primary() {
 
 // unary = ("-" | "+")? primary
 Node* unary() {
-    if (consume_reserved('+')) {
+    if (consume_reserved("+")) {
         return primary();
     }
-    else if (consume_reserved('-')) {
+    else if (consume_reserved("-")) {
         return new_binary_node(ND_SUB, new_num_node(0), primary());
     }
     else {
@@ -167,10 +176,10 @@ Node* mul() {
     Node* node = unary();
 
     for (;;) {
-        if (consume_reserved('*')) {
+        if (consume_reserved("*")) {
             node = new_binary_node(ND_MUL, node, unary());
         }
-        else if (consume_reserved('/')) {
+        else if (consume_reserved("/")) {
             node = new_binary_node(ND_DIV, node, unary());
         }
         else {
@@ -184,10 +193,10 @@ Node* expr() {
     Node* node = mul();
 
     for (;;) {
-        if (consume_reserved('+')) {
+        if (consume_reserved("+")) {
             node = new_binary_node(ND_ADD, node, mul());
         }
-        else if (consume_reserved('-')) {
+        else if (consume_reserved("-")) {
             node = new_binary_node(ND_SUB, node, mul());
         }
         else {
