@@ -59,7 +59,7 @@ Token* tokenize(char* p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
             cur = new_token(TK_RESERVED, cur, p++);
             continue;
         }
@@ -105,6 +105,117 @@ bool at_end() {
     return token->kind == TK_EOF;
 }
 
+typedef enum {
+    ND_ADD,
+    ND_SUB,
+    ND_MUL,
+    ND_DIV,
+    ND_NUM,
+} NodeKind;
+
+typedef struct Node Node;
+
+struct Node {
+    NodeKind kind;
+    Node* lhs;
+    Node* rhs;
+    int val; // used only when kind is ND_NUM
+};
+
+Node* new_binary_node(NodeKind kind, Node* lhs, Node* rhs) {
+    Node* node = calloc(1, sizeof(Node));
+    node->kind = kind;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return node;
+}
+
+Node* new_num_node(int val) {
+    Node* node = calloc(1, sizeof(Node));
+    node->kind = ND_NUM;
+    node->val = val;
+    return node;
+}
+
+Node* expr();
+
+// primary = "(" expr ")" | num
+Node* primary() {
+    if (consume_reserved('(')) {
+        Node* node = expr();
+        expect_reserved(')');
+        return node;
+    }
+    return new_num_node(expect_number());
+}
+
+// mul = primary ("*" primary | "/" primary)*
+Node* mul() {
+    Node* node = primary();
+
+    for (;;) {
+        if (consume_reserved('*')) {
+            node = new_binary_node(ND_MUL, node, primary());
+        }
+        else if (consume_reserved('/')) {
+            node = new_binary_node(ND_DIV, node, primary());
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+// expr = mul ("+" mul | "-" mul)*
+Node* expr() {
+    Node* node = mul();
+
+    for (;;) {
+        if (consume_reserved('+')) {
+            node = new_binary_node(ND_ADD, node, mul());
+        }
+        else if (consume_reserved('-')) {
+            node = new_binary_node(ND_SUB, node, mul());
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+void gen(Node* node) {
+    if (node->kind == ND_NUM) {
+        printf("\tpush %d\n", node->val);
+        return;
+    }
+
+    gen(node->lhs);
+    gen(node->rhs);
+
+    printf("\tpop rdi\n");
+    printf("\tpop rax\n");
+
+    switch (node->kind) {
+    case ND_ADD:
+        printf("\tadd rax, rdi\n");
+        break;
+    case ND_SUB:
+        printf("\tsub rax, rdi\n");
+        break;
+    case ND_MUL:
+        printf("\timul rax, rdi\n");
+        break;
+    case ND_DIV:
+        printf("\tcqo\n");
+        printf("\tidiv rdi\n");
+        break;
+    default:
+        break;
+    }
+
+    printf("\tpush rax\n");
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         fprintf(stderr, "arg missing!\n");
@@ -112,25 +223,14 @@ int main(int argc, char* argv[]) {
 
     user_input = argv[1];
     token = tokenize(user_input);
+    Node* node = expr();
 
     printf(".intel_syntax noprefix\n");
     printf(".globl main\n");
-    printf("\n");
     printf("main:\n");
 
-    printf("\tmov rax, %d\n", expect_number());
-
-    // output assembly with consuming succesive tokens with form '+ <NUM>' or '- <NUM>'
-    while (!at_end()) {
-        if (consume_reserved('+')) {
-            printf("\tadd rax, %d\n", expect_number());
-            continue;
-        }
-
-        expect_reserved('-');
-        printf("\tsub rax, %d\n", expect_number());
-    }
-
+    gen(node);
+    printf("\tpop rax\n");
     printf("\tret\n");
 
     return 0;
