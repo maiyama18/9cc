@@ -149,16 +149,29 @@ Node* primary() {
     return new_num_node(expect_number());
 }
 
-// mul = primary ("*" primary | "/" primary)*
+// unary = ("-" | "+")? primary
+Node* unary() {
+    if (consume_reserved('+')) {
+        return primary();
+    }
+    else if (consume_reserved('-')) {
+        return new_binary_node(ND_SUB, new_num_node(0), primary());
+    }
+    else {
+        return primary();
+    }
+}
+
+// mul = unary ("*" unary | "/" unary)*
 Node* mul() {
-    Node* node = primary();
+    Node* node = unary();
 
     for (;;) {
         if (consume_reserved('*')) {
-            node = new_binary_node(ND_MUL, node, primary());
+            node = new_binary_node(ND_MUL, node, unary());
         }
         else if (consume_reserved('/')) {
-            node = new_binary_node(ND_DIV, node, primary());
+            node = new_binary_node(ND_DIV, node, unary());
         }
         else {
             return node;
