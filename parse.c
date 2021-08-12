@@ -1,5 +1,9 @@
 #include "9cc.h"
 
+static bool at_end() {
+    return token->kind == TK_EOF;
+}
+
 // If the next token is expected reserved, return true and comsume a token.
 // Otherwise return false.
 static bool consume_reserved(char* op) {
@@ -12,6 +16,15 @@ static bool consume_reserved(char* op) {
     }
     token = token->next;
     return true;
+}
+
+static Token* consume_ident() {
+    if (token->kind != TK_IDENT) {
+        return NULL;
+    }
+    Token* cur = token;
+    token = token->next;
+    return cur;
 }
 
 // If the next token is expected reserved, comsume a token.
@@ -45,8 +58,15 @@ static Node* new_num_node(int val) {
     return node;
 }
 
-// primary = "(" expr ")" | num
+// primary = "(" expr ")" | num | ident
 static Node* primary() {
+    Token* tok = consume_ident();
+    if (tok) {
+        Node* node = calloc(1, sizeof(Node));
+        node->kind = ND_LVAR;
+        node->offset = (tok->str[0] - 'a' + 1) * 8;
+        return node;
+    }
     if (consume_reserved("(")) {
         Node* node = expr();
         expect_reserved(')');
@@ -142,11 +162,32 @@ static Node* equality() {
     }
 }
 
-static bool at_end() {
-    return token->kind == TK_EOF;
+// assign       = equality ("=" assign)?
+static Node* assign() {
+    Node* node = equality();
+    if (consume_reserved("=")) {
+        node = new_binary_node(ND_ASSIGN, node, assign());
+    }
+    return node;
 }
 
 // expr       = equality
 Node* expr() {
-    return equality();
+    return assign();
+}
+
+// stmt       = expr ";"
+static Node* stmt() {
+    Node* node = expr();
+    expect_reserved(';');
+    return node;
+}
+
+// program    = stmt*
+Node* program() {
+    int i = 0;
+    while (!at_end()) {
+        stmts[i++] = stmt();
+    }
+    stmts[i] = NULL;
 }

@@ -12,6 +12,7 @@
 
 typedef enum {
     TK_RESERVED,
+    TK_IDENT,
     TK_NUM,
     TK_EOF,
 } TokenKind;
@@ -43,7 +44,9 @@ typedef enum {
     ND_LTE,
     ND_EQ,
     ND_NEQ,
+    ND_ASSIGN,
     ND_NUM,
+    ND_LVAR,
 } NodeKind;
 
 typedef struct Node Node;
@@ -52,14 +55,19 @@ struct Node {
     Node* lhs;
     Node* rhs;
     int val; // used only when kind is ND_NUM
+    int offset; // offset from base pointer. used only when kind is ND_LVAR
 };
 
 Node* expr();
+Node* program();
 
 extern Token* token;
+
+extern Node* stmts[100];
 
 //
 // codegen.c
 //
 
+void error(char* fmt, ...);
 void gen(Node* node);
