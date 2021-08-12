@@ -50,6 +50,10 @@ Token* new_token(TokenKind kind, Token* cur, char* str, int len) {
     return t;
 }
 
+bool starts_with(char* p, char* q) {
+    return memcmp(p, q, strlen(q)) == 0;
+}
+
 // Tokenine all the input and return the first token.
 Token* tokenize(char* p) {
     Token head;
@@ -62,12 +66,9 @@ Token* tokenize(char* p) {
             continue;
         }
 
-        if ((*p == '<' && *(p + 1) == '=') ||
-            (*p == '>' && *(p + 1) == '=') ||
-            (*p == '=' && *(p + 1) == '=') ||
-            (*p == '!' && *(p + 1) == '=')) {
-            cur = new_token(TK_RESERVED, cur, p++, 2);
-            p++;
+        if (starts_with(p, "==") || starts_with(p, "!=") || starts_with(p, ">=") || starts_with(p, "<=")) {
+            cur = new_token(TK_RESERVED, cur, p, 2);
+            p += 2;
             continue;
         }
 
