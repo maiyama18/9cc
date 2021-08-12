@@ -62,6 +62,12 @@ Token* tokenize(char* p) {
             continue;
         }
 
+        if ((*p == '<' && *(p + 1) == '=') || (*p == '>' && *(p + 1) == '=')) {
+            cur = new_token(TK_RESERVED, cur, p++, 2);
+            p++;
+            continue;
+        }
+
         if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
@@ -120,6 +126,7 @@ typedef enum {
     ND_MUL,
     ND_DIV,
     ND_LT,
+    ND_LTE,
     ND_NUM,
 } NodeKind;
 
@@ -211,7 +218,13 @@ Node* relational() {
     Node* node = add();
 
     for (;;) {
-        if (consume_reserved("<")) {
+        if (consume_reserved("<=")) {
+            node = new_binary_node(ND_LTE, node, add());
+        }
+        else if (consume_reserved(">=")) {
+            node = new_binary_node(ND_LTE, add(), node);
+        }
+        else if (consume_reserved("<")) {
             node = new_binary_node(ND_LT, node, add());
         }
         else if (consume_reserved(">")) {
@@ -256,6 +269,11 @@ void gen(Node* node) {
     case ND_LT:
         printf("\tcmp rax, rdi\n");
         printf("\tsetl al\n");
+        printf("\tmovzb rax, al\n");
+        break;
+    case ND_LTE:
+        printf("\tcmp rax, rdi\n");
+        printf("\tsetle al\n");
         printf("\tmovzb rax, al\n");
         break;
     default:

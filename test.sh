@@ -35,5 +35,9 @@ assert 1 '3>2>0'
 assert 0 '3>2>2'
 assert 1 '0<2<3'
 assert 1 '(10+11)>(10+10)'
+assert 1 '3>=2'
+assert 0 '3<=2'
+assert 1 '2<=2'
+assert 1 '2>=2'
 
 echo OK
