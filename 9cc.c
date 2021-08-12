@@ -223,13 +223,7 @@ Node* relational() {
     Node* node = add();
 
     for (;;) {
-        if (consume_reserved("==")) {
-            node = new_binary_node(ND_EQ, node, add());
-        }
-        else if (consume_reserved("!=")) {
-            node = new_binary_node(ND_NEQ, node, add());
-        }
-        else if (consume_reserved("<=")) {
+        if (consume_reserved("<=")) {
             node = new_binary_node(ND_LTE, node, add());
         }
         else if (consume_reserved(">=")) {
@@ -247,8 +241,26 @@ Node* relational() {
     }
 }
 
+// equality   = relational ("==" relational | "!=" relational)*
+Node* equality() {
+    Node* node = relational();
+
+    for (;;) {
+        if (consume_reserved("==")) {
+            node = new_binary_node(ND_EQ, node, relational());
+        }
+        else if (consume_reserved("!=")) {
+            node = new_binary_node(ND_NEQ, node, relational());
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+// expr       = equality
 Node* expr() {
-    return relational();
+    return equality();
 }
 
 void gen(Node* node) {
