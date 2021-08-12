@@ -62,7 +62,7 @@ Token* tokenize(char* p) {
             continue;
         }
 
-        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>') {
             cur = new_token(TK_RESERVED, cur, p++, 1);
             continue;
         }
@@ -119,6 +119,7 @@ typedef enum {
     ND_SUB,
     ND_MUL,
     ND_DIV,
+    ND_LT,
     ND_NUM,
 } NodeKind;
 
@@ -188,8 +189,8 @@ Node* mul() {
     }
 }
 
-// expr = mul ("+" mul | "-" mul)*
-Node* expr() {
+// add = mul ("+" mul | "-" mul)*
+Node* add() {
     Node* node = mul();
 
     for (;;) {
@@ -203,6 +204,27 @@ Node* expr() {
             return node;
         }
     }
+}
+
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+Node* relational() {
+    Node* node = add();
+
+    for (;;) {
+        if (consume_reserved("<")) {
+            node = new_binary_node(ND_LT, node, add());
+        }
+        else if (consume_reserved(">")) {
+            node = new_binary_node(ND_LT, add(), node);
+        }
+        else {
+            return node;
+        }
+    }
+}
+
+Node* expr() {
+    return relational();
 }
 
 void gen(Node* node) {
@@ -230,6 +252,11 @@ void gen(Node* node) {
     case ND_DIV:
         printf("\tcqo\n");
         printf("\tidiv rdi\n");
+        break;
+    case ND_LT:
+        printf("\tcmp rax, rdi\n");
+        printf("\tsetl al\n");
+        printf("\tmovzb rax, al\n");
         break;
     default:
         break;
