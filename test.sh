@@ -44,8 +44,7 @@ assert 0 '23==99;'
 assert 0 '-1!=-1;'
 assert 1 '23!=99;'
 assert 1 '1==1<2;'
-assert 42 'a=42;'
-assert 42 'a=42;a;'
-assert 45 'a=42;b=1+2;a+b;'
+assert 42 'foo=42;foo;'
+assert 45 'foo=42;foo+3;'
 
 echo OK

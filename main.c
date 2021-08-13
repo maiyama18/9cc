@@ -20,7 +20,6 @@ int main(int argc, char* argv[]) {
     // prologue
     printf("\tpush rbp\n");
     printf("\tmov rbp, rsp\n");
-    printf("\tsub rsp, %d\n", 8 * 26);
 
     for (int i = 0; stmts[i]; i++) {
         gen(stmts[i]);

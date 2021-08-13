@@ -52,8 +52,12 @@ Token* tokenize(char* p) {
         }
 
         if (*p >= 'a' && *p <= 'z') {
-            cur = new_token(TK_IDENT, cur, p++, 1);
-            cur->len = 1;
+            char* s = p;
+            p++;
+            while (*p >= 'a' && *p <= 'z') {
+                p++;
+            }
+            cur = new_token(TK_IDENT, cur, s, p - s);
             continue;
         }
 

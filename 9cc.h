@@ -58,6 +58,14 @@ struct Node {
     int offset; // offset from base pointer. used only when kind is ND_LVAR
 };
 
+typedef struct LVar LVar;
+struct LVar {
+    LVar* next;
+    char* name;
+    int len;
+    int offset;
+};
+
 Node* expr();
 Node* program();
 

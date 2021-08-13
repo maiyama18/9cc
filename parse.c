@@ -18,6 +18,26 @@ static bool consume_reserved(char* op) {
     return true;
 }
 
+static LVar* locals;
+
+static LVar* init_locals() {
+    LVar* head = calloc(1, sizeof(LVar));
+    head->next = NULL;
+    head->name = "";
+    head->len = 0;
+    head->offset = 0;
+    locals = head;
+}
+
+static LVar* find_lvar(Token* tok) {
+    for (LVar* lvar = locals; lvar; lvar = lvar->next) {
+        if (lvar->len == tok->len && !memcmp(lvar->name, tok->str, lvar->len)) {
+            return lvar;
+        }
+    }
+    return NULL;
+}
+
 static Token* consume_ident() {
     if (token->kind != TK_IDENT) {
         return NULL;
@@ -64,9 +84,24 @@ static Node* primary() {
     if (tok) {
         Node* node = calloc(1, sizeof(Node));
         node->kind = ND_LVAR;
-        node->offset = (tok->str[0] - 'a' + 1) * 8;
+
+        LVar* lvar = find_lvar(tok);
+        if (lvar) {
+            node->offset = lvar->offset;
+        }
+        else {
+            lvar = calloc(1, sizeof(LVar));
+            lvar->name = tok->str;
+            lvar->len = tok->len;
+            lvar->next = locals;
+            lvar->offset = locals->offset + 8;
+            locals = lvar;
+
+            node->offset = lvar->offset;
+        }
         return node;
     }
+
     if (consume_reserved("(")) {
         Node* node = expr();
         expect_reserved(')');
@@ -171,6 +206,7 @@ static Node* assign() {
     return node;
 }
 
+
 // expr       = equality
 Node* expr() {
     return assign();
@@ -185,6 +221,8 @@ static Node* stmt() {
 
 // program    = stmt*
 Node* program() {
+    init_locals();
+
     int i = 0;
     while (!at_end()) {
         stmts[i++] = stmt();
